@@ -17,27 +17,16 @@ import org.slf4j.LoggerFactory;
  * Encapsulation of a Phoenix channel: a Socket, a topic and the channel's state.
  */
 public class Channel {
-
     private static final long DEFAULT_TIMEOUT = 5000;
-
     private static final Logger log = LoggerFactory.getLogger(Channel.class);
-
     private final List<Binding> bindings = new ArrayList<>();
-
     private Timer channelTimer = null;
-
     private final Push joinPush;
-
     private boolean joinedOnce = false;
-
     private final JsonNode payload;
-
     private final LinkedBlockingDeque<Push> pushBuffer = new LinkedBlockingDeque<>();
-
     private final Socket socket;
-
     private ChannelState state = ChannelState.CLOSED;
-
     private final String topic;
 
     public Channel(final String topic, final JsonNode payload, final Socket socket) {
@@ -58,6 +47,7 @@ public class Channel {
             @Override
             public void onTimeout() {
                 Channel.this.state = ChannelState.ERRORED;
+                scheduleRejoinTimer();
             }
         });
 
@@ -81,8 +71,6 @@ public class Channel {
                 Channel.this.trigger(Socket.replyEventName(envelope.getRef()), envelope);
             }
         });
-
-
     }
 
     /**
@@ -95,7 +83,6 @@ public class Channel {
     public Socket getSocket() {
         return socket;
     }
-
     public String getTopic() {
         return topic;
     }
@@ -277,6 +264,7 @@ public class Channel {
                 }
             }
         };
+
         scheduleTask(rejoinTimerTask, Socket.RECONNECT_INTERVAL_MS);
     }
 
